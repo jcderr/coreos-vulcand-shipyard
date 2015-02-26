@@ -1,0 +1,15 @@
+[Unit]
+Description=Vulcan
+After=docker.service
+
+[Service]
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill vulcan1
+ExecStartPre=-/usr/bin/docker rm vulcan1
+ExecStartPre=/usr/bin/docker pull mailgun/vulcand:v0.8.0-beta.2
+ExecStart=/usr/bin/docker run --name vulcan1 -p 80:80 -p 443:443 -p 8182:8182 -p 8181:8181 mailgun/vulcand:v0.8.0-beta.2 /go/bin/vulcand -apiInterface=0.0.0.0 -interface=0.0.0.0 -etcd=http://<etcd_hostname>:4001 -port=80 -apiPort=8182
+ExecStop=/usr/bin/docker kill vulcan1
+
+[X-Fleet]
+MachineMetadata="role=service"
+MachineMetadata="access=private"
