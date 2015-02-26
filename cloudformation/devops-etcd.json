@@ -44,12 +44,9 @@
         "GroupDescription": "CoreOS SecurityGroup",
 		"VpcId": "vpc-73ea7218",
         "SecurityGroupIngress": [
-          {"IpProtocol": "tcp", "FromPort": "22", "ToPort": "22", "CidrIp": "192.168.0.0/16"},
-          {"IpProtocol": "tcp", "FromPort": "22", "ToPort": "22", "CidrIp": "10.0.0.0/8"},
-          {"IpProtocol": "tcp", "FromPort": "4001", "ToPort": "4001", "CidrIp": "192.168.0.0/16"},
-          {"IpProtocol": "tcp", "FromPort": "4001", "ToPort": "4001", "CidrIp": "10.0.0.0/8"},
-          {"IpProtocol": "tcp", "FromPort": "7001", "ToPort": "7001", "CidrIp": "192.168.0.0/16"},
-          {"IpProtocol": "tcp", "FromPort": "7001", "ToPort": "7001", "CidrIp": "10.0.0.0/8"}
+          {"IpProtocol": "tcp", "FromPort": "22", "ToPort": "22", "CidrIp": "0.0.0.0/0"},
+          {"IpProtocol": "tcp", "FromPort": "4001", "ToPort": "4001", "CidrIp": "0.0.0.0/0"},
+          {"IpProtocol": "tcp", "FromPort": "7001", "ToPort": "7001", "CidrIp": "0.0.0.0/0"},
         ]
       }
     },
