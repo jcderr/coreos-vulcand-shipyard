@@ -1,0 +1,22 @@
+[Unit]
+Description=Docker Registry Service
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill docker-registry
+ExecStartPre=-/usr/bin/docker rm docker-registry
+ExecStartPre=/usr/bin/docker pull registry:latest
+ExecStart=/usr/bin/docker run --name docker-registry -e AWS_BUCKET=radius-devops-docker-registry \
+    -e AWS_KEY=<< your AWS key >> -e AWS_SECRET=<< your AWS secret >> \
+    -e DOCKER_REGISTRY_CONFIG=/docker-registry/config/config_sample.yml \
+    -e SEARCH_BACKEND=sqlalchemy -e SETTINGS_FLAVOR=s3 -e STORAGE_PATH=/registry \
+    -e MIRROR_SOURCE=https://registry-1.docker.io -e MIRROR_SOURCE_INDEX=https://index.docker.io \
+    -p 5000:5000 \
+    registry
+ExecStop=/usr/bin/docker stop docker-registry
+
+[X-Fleet]
+MachineMetadata=role=service
+MachineMetadata=access=private
