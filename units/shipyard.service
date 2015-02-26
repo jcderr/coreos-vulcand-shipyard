@@ -1,0 +1,15 @@
+[Unit]
+Description=Shipyard Service
+After=docker.service
+
+[Service]
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill shipyard
+ExecStartPre=-/usr/bin/docker rm shipyard
+ExecStartPre=/usr/bin/docker pull shipyard/shipyard
+ExecStart=/usr/bin/docker run -v /var/run/docker.sock:/var/run/docker.sock shipyard/deploy start
+ExecStop=/usr/bin/docker kill shipyard
+
+[X-Fleet]
+MachineMetadata=role=service
+MachineMetadata=access=private
