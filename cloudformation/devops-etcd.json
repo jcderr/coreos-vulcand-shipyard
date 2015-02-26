@@ -1,0 +1,101 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "CoreOS on EC2: http://coreos.com/docs/running-coreos/cloud-providers/ec2/",
+  "Mappings" : {
+      "RegionMap" : {
+          "us-east-1" : {
+              "AMI" : "ami-eeefb886"
+          }
+      }
+  },
+  "Parameters": {
+    "InstanceType" : {
+      "Description" : "EC2 PV instance type (m3.medium, etc).",
+      "Type" : "String",
+      "Default" : "m3.medium",
+      "ConstraintDescription" : "Must be a valid EC2 PV instance type."
+    },
+    "ClusterSize": {
+      "Default": "3",
+      "MinValue": "3",
+      "MaxValue": "3",
+      "Description": "Number of nodes in cluster (3-12).",
+      "Type": "Number"
+    },
+    "DiscoveryURL": {
+      "Description": "An unique etcd cluster discovery URL. Grab a new token from https://discovery.etcd.io/new",
+      "Type": "String"
+    },
+    "AdvertisedIPAddress": {
+      "Description": "Use 'private' if your etcd cluster is within one region or 'public' if it spans regions or cloud providers.",
+      "Default": "private",
+      "AllowedValues": ["private", "public"],
+      "Type": "String"
+    },
+    "KeyPair" : {
+      "Description" : "The name of an EC2 Key Pair to allow SSH access to the instance.",
+      "Type" : "String"
+    }
+  },
+  "Resources": {
+    "CoreOSSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "CoreOS SecurityGroup",
+		"VpcId": "vpc-73ea7218",
+        "SecurityGroupIngress": [
+          {"IpProtocol": "tcp", "FromPort": "22", "ToPort": "22", "CidrIp": "192.168.0.0/16"},
+          {"IpProtocol": "tcp", "FromPort": "22", "ToPort": "22", "CidrIp": "10.0.0.0/8"},
+          {"IpProtocol": "tcp", "FromPort": "4001", "ToPort": "4001", "CidrIp": "192.168.0.0/16"},
+          {"IpProtocol": "tcp", "FromPort": "4001", "ToPort": "4001", "CidrIp": "10.0.0.0/8"},
+          {"IpProtocol": "tcp", "FromPort": "7001", "ToPort": "7001", "CidrIp": "192.168.0.0/16"},
+          {"IpProtocol": "tcp", "FromPort": "7001", "ToPort": "7001", "CidrIp": "10.0.0.0/8"}
+        ]
+      }
+    },
+    "CoreOSServerAutoScale": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "AvailabilityZones": [ "us-east-1c", "us-east-1d", "us-east-1e" ],
+        "LaunchConfigurationName": {"Ref": "CoreOSServerLaunchConfig"},
+        "MinSize": "3",
+        "MaxSize": "3",
+        "DesiredCapacity": {"Ref": "ClusterSize"},
+		"VPCZoneIdentifier": [ "<< subnet 1 >>", "<< subnet 2 >>", "<< subnet 3>>" ],
+        "Tags": [
+            {"Key": "Name", "Value": { "Ref" : "AWS::StackName" }, "PropagateAtLaunch": true}
+        ]
+      }
+    },
+    "CoreOSServerLaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
+        "InstanceType": {"Ref": "InstanceType"},
+        "KeyName": {"Ref": "KeyPair"},
+        "SecurityGroups": [{"Ref": "CoreOSSecurityGroup"}],
+        "IamInstanceProfile": "devops-etcd",
+        "UserData" : { "Fn::Base64":
+          { "Fn::Join": [ "", [
+            "#cloud-config\n\n",
+            "coreos:\n",
+            "  etcd:\n",
+            "    discovery: ", { "Ref": "DiscoveryURL" }, "\n",
+            "    addr: $", { "Ref": "AdvertisedIPAddress" }, "_ipv4:4001\n",
+            "    peer-addr: $", { "Ref": "AdvertisedIPAddress" }, "_ipv4:7001\n",
+			"  fleet:\n",
+			"    metadata: role=service,access=private\n",
+            "  units:\n",
+            "    - name: etcd.service\n",
+            "      command: start\n",
+            "    - name: fleet.service\n",
+            "      command: start\n",
+			"    - name: docker.service\n",
+			"      command: start\n"
+			] ]
+          }
+        }
+      }
+    }
+  }
+}
